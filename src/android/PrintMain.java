@@ -10,12 +10,14 @@ import com.zacloud.deviceservice.aidl.IPrinter;
 import com.zacloud.deviceservice.aidl.PrinterListener;
 
 import org.apache.cordova.CallbackContext;
+import org.apache.cordova.LOG;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.util.Iterator;
 
@@ -125,9 +127,6 @@ public class PrintMain {
     System.out.println("start print");
 
 
-
-
-
     try {
       int status = printer.getStatus();
       System.out.println("打印機狀態：" + status);
@@ -150,7 +149,13 @@ public class PrintMain {
               // 打印图片
               if (key.indexOf("img") == 0) {
                 JSONObject imgObj = obj.getJSONObject(key);
-                addImage(imgObj.optString("imgSrc"), imgObj.optInt("offset"), imgObj.optInt("width"), imgObj.optInt("height"));
+                File file = new File(Environment.getExternalStorageDirectory(),
+                        imgObj.optString("imgSrc"));
+                if (file.isDirectory()) {
+                  LOG.e("农行打印", "打印logo不存在");
+                } else {
+                  addImage(imgObj.optString("imgSrc"), imgObj.optInt("offset"), imgObj.optInt("width"), imgObj.optInt("height"));
+                }
               }
 
               // 打印条形码
@@ -163,6 +168,10 @@ public class PrintMain {
               if (key.indexOf("qrCode") == 0) {
                 JSONObject barCodeObj = obj.getJSONObject(key);
                 addQrCode(barCodeObj.optString("data"), barCodeObj.optInt("offset"), barCodeObj.optInt("expectedHeight"));
+              }
+              if (key.indexOf("feedLine") == 0) {
+                JSONObject feedLineObj = obj.getJSONObject(key);
+                printer.feedLine(feedLineObj.optInt("line"));
               }
 
             }
@@ -254,6 +263,15 @@ public class PrintMain {
           }
         });
       } else {
+        JSONObject errMessageObj = new JSONObject();
+        try {
+          errMessageObj.put("code", "0001");
+          errMessageObj.put("message", getErrorInfo(status));
+          _callbackContext.error(errMessageObj);
+        } catch (JSONException e) {
+          // TODO
+          e.printStackTrace();
+        }
         Log.i("test", "打印失败:" + getErrorInfo(status));
 //        Toast.makeText(this.cordova.getActivity().getApplicationContext(), "打印失败:" + getErrorInfo(status), Toast.LENGTH_SHORT);
       }
@@ -309,9 +327,10 @@ public class PrintMain {
 //    }
 
     try {
+
 //      in = _context.getResources().getAssets().open(imgSrc);
       File file = new File(Environment.getExternalStorageDirectory(),
-        imgSrc);
+              imgSrc);
       in = new FileInputStream(file);
 //      in = getResources().getAssets().open(fileName);
       // 获取文件的字节数
@@ -326,5 +345,21 @@ public class PrintMain {
       e.printStackTrace();
     }
     return buffer;
+  }
+
+  public static void judeFileExists(File file) {
+
+    if (file.exists()) {
+      System.out.println("file exists");
+    } else {
+      System.out.println("file not exists, create it ...");
+      try {
+        file.createNewFile();
+      } catch (IOException e) {
+        // TODO Auto-generated catch block
+        e.printStackTrace();
+      }
+    }
+
   }
 }

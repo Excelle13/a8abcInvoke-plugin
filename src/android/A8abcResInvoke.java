@@ -44,6 +44,15 @@ public class A8abcResInvoke extends CordovaPlugin {
 //                coolMethod(message, callbackContext);
                 break;
               default:
+                JSONObject errMessageObj = new JSONObject();
+                try {
+                  errMessageObj.put("code", "0002");
+                  errMessageObj.put("message", "没有找到此方法");
+                  callbackContext.error(errMessageObj);
+                } catch (JSONException e) {
+                  // TODO
+                  e.printStackTrace();
+                }
                 LOG.e("log调用", "没有找到此方法");
             }
           } catch (Exception e) {
